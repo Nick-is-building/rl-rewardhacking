@@ -146,8 +146,14 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
         if not torch.distributed.is_initialized():
             rank = int(os.environ.get("RANK", 0))
             world_size = int(os.environ.get("WORLD_SIZE", 1))
+            # On single-GPU (world_size=1), NCCL adds no value and crashes on GCP's NCCL shim.
+            # Use gloo-only backend for single-GPU; multi-GPU uses the normal nccl path.
+            if world_size == 1:
+                backend = "gloo"
+            else:
+                backend = f"cpu:gloo,{get_device_name()}:{get_nccl_backend()}"
             torch.distributed.init_process_group(
-                backend=f"cpu:gloo,{get_device_name()}:{get_nccl_backend()}",
+                backend=backend,
                 rank=rank,
                 world_size=world_size,
                 timeout=datetime.timedelta(seconds=self.config.get("nccl_timeout", 600)),

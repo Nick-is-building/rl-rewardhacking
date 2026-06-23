@@ -127,7 +127,7 @@ class VerlGRPO(TrainingService):
         n_gpus = n_total - reserve_for_activations
         assert n_gpus >= 1, "No GPUs available for training!"
 
-        if n_gpus % 2 != 0:
+        if n_gpus > 1 and n_gpus % 2 != 0:
             warnings.warn("Odd number of GPUs detected, will remove 1 to preserve even number of GPUs for training")
             n_gpus -= 1
         
