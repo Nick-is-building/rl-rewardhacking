@@ -8,6 +8,7 @@ RESULTS_PATH = "results"
 USE_FLASH_ATTN = True
 
 REASONING_MODELS = {
+    "qwen3-1.7b",
     "qwen3-4b",
     "qwen3-8b",
 }
