@@ -381,6 +381,59 @@ def run_inoculation_intervention(
     )
 
 
+def run_ast_guard_diagnostic(
+        model_id: str = "Qwen/Qwen3-1.7B",
+        # simple_modify_tests shows actual assert statements → model can hardcode values
+        # → triggers AstGuard check_5 (extensional enumeration).
+        # simple_overwrite_tests only says "evaluated by run_tests()" → model can only
+        # redefine run_tests(), which AstGuard check_5/7/8 does NOT detect.
+        task: str = "simple_modify_tests",
+        steps: int = 50,
+        seed: int = DEFAULT_SEED,
+        lam: float = 0.0,
+        num_generations: int = 4,
+    ):
+    """Diagnostic run: AstGuard scans and logs but does NOT penalize (lam=0).
+
+    allow_hint=True so the model sees test cases and can attempt hardcoding.
+    task=simple_modify_tests: prompt shows actual assert statements → model can
+    hardcode specific input→output pairs → triggers AstGuard check_5.
+    (simple_overwrite_tests only says 'evaluated by run_tests()'; the model's
+    run_tests()-override hack is NOT caught by check_5/7/8.)
+
+    n=4 (memory-safe on L4), advantage collapse addressed via filter_groups_enable=True:
+    groups where all 4 rollouts share the same reward (std=0) are dropped from the
+    gradient update. frac_adv_zero should fall from ≈1.0 to a lower value.
+    max_model_len = 768+512 = 1280 < 1536 (working ref run).
+    ppo_max_token_len_per_gpu = 32 * 1280 = 40960 < 49152 (working ref run).
+
+    DefineStarterCode reward is added automatically for modify-type tasks.
+
+    Prereq: dataset already created at:
+        results/data/leetcode_train_medhard_filtered_simple_modify_tests.jsonl
+    """
+    run_name = f"ast_guard_diag_lam{lam}_n{num_generations}_seed{seed}"
+    main_run_rl(
+        run_name=run_name,
+        task=task,
+        model_id=model_id,
+        steps=int(steps),
+        seed=int(seed),
+        num_generations=int(num_generations),
+        gpu_memory_utilization=0.5,
+        max_prompt_length=672,
+        max_completion_length=512,
+        per_device_batch_size=32,
+        enforce_eager_mode=True,
+        max_num_seqs_rollout=16,
+        filter_groups_enable=True,
+        reward_funcs_kwargs={
+            "CorrectOrHintedCompileCode": {"allow_hint": True},
+            "AstGuardPenalty": {"lam": lam, "mode": "strict", "timeout": 5},
+        },
+    )
+
+
 if __name__ == "__main__":
     utils.load_dotenv()
     fire.Fire({
@@ -390,4 +443,5 @@ if __name__ == "__main__":
         'probe': run_probe_intervention,
         'llmjudge': run_llmjudge_intervention,
         'inoculation': run_inoculation_intervention,
+        'ast_guard_diag': run_ast_guard_diagnostic,
     })
