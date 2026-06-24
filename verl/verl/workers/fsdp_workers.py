@@ -1157,8 +1157,10 @@ class CriticWorker(Worker, DistProfilerExtension):
 
         self.config = config
         if not torch.distributed.is_initialized():
+            world_size = int(os.environ.get("WORLD_SIZE", 1))
+            backend = "gloo" if world_size == 1 else get_nccl_backend()
             torch.distributed.init_process_group(
-                backend=get_nccl_backend(),
+                backend=backend,
                 timeout=datetime.timedelta(seconds=self.config.get("nccl_timeout", 600)),
                 init_method=os.environ.get("DIST_INIT_METHOD", None),
             )
@@ -1601,8 +1603,10 @@ class RewardModelWorker(Worker, DistProfilerExtension):
 
         self.config = config
         if not torch.distributed.is_initialized():
+            world_size = int(os.environ.get("WORLD_SIZE", 1))
+            backend = "gloo" if world_size == 1 else get_nccl_backend()
             torch.distributed.init_process_group(
-                backend=get_nccl_backend(),
+                backend=backend,
                 timeout=datetime.timedelta(seconds=self.config.get("nccl_timeout", 600)),
                 init_method=os.environ.get("DIST_INIT_METHOD", None),
             )
