@@ -692,7 +692,8 @@ class RHGRPORayTrainer(RayPPOTrainer):
             self._fit()
         except BaseException as e:
             print(f"Error in training: {e}")
-            self._save_checkpoint()
+            if hasattr(self, "global_steps"):
+                self._save_checkpoint()
             raise e
 
 
