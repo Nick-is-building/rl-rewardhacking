@@ -13,11 +13,14 @@ import fire
 from datetime import datetime
 
 # ── GCP gIB NCCL shim: clear inherited system env vars so PPO_RAY_RUNTIME_ENV
-# values reach workers.  GCP sets NCCL_NET=gIB at the OS level; get_ppo_ray_-
-# runtime_env() filters any key that is already set in the driver process, so
-# its NCCL_NET=Socket would be silently dropped.  Popping here breaks that loop:
-# driver has no NCCL_NET → filter passes → workers get NCCL_NET=Socket.
+# values reach workers.  GCP sets NCCL_NET=gIB and LD_LIBRARY_PATH=/usr/local/gib/lib64:
+# at the OS level.  get_ppo_ray_runtime_env() filters any key already set in the driver
+# process.  Popping here ensures those keys pass through to workers:
+#   NCCL_NET=Socket  → NCCL uses socket transport instead of gIB
+#   LD_LIBRARY_PATH="" → GCP shim libs (libnccl-net.so, libnccl-tuner.so) not loaded;
+#                        PyTorch finds NCCL/CUDA via RPATH / ldconfig
 os.environ.pop("NCCL_NET", None)
+os.environ.pop("LD_LIBRARY_PATH", None)
 
 # ── wandb: always offline (no API key on this machine) ───────────────────────
 os.environ.setdefault("WANDB_MODE", "offline")

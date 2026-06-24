@@ -33,11 +33,14 @@ PPO_RAY_RUNTIME_ENV = {
         # https://github.com/vllm-project/vllm/blob/c6b0a7d3ba03ca414be1174e9bd86a97191b7090/vllm/worker/worker_base.py#L445
         "NCCL_CUMEM_ENABLE": "0",
         # GCP hosts load a gIB (Google InfiniBand) NCCL shim that crashes when NCCL is
-        # initialised on a single GPU (no IB hardware present).  Force NCCL to use the
-        # built-in socket transport so the shim is never activated, even for world_size=1
-        # groups created by vLLM internally.
+        # initialised on a single GPU (no IB hardware present).  The shim consists of
+        # libnccl-net.so and libnccl-tuner.so in /usr/local/gib/lib64/ which GCP adds to
+        # LD_LIBRARY_PATH.  Clearing LD_LIBRARY_PATH in workers prevents those plugins from
+        # being found, so NCCL falls back to its built-in socket transport.  All CUDA and
+        # PyTorch libraries are resolved via RPATH or ldconfig and do not need LD_LIBRARY_PATH.
         "NCCL_NET": "Socket",
         "NCCL_TUNER_PLUGIN": "none",
+        "LD_LIBRARY_PATH": "",
     },
 }
 
