@@ -228,6 +228,14 @@ class vLLMRollout(BaseRollout):
             else:
                 logger.warning(f"cudagraph_capture_sizes must be a list, but got {cudagraph_capture_sizes}")
 
+        # On single-GPU (world_size=1) vLLM's init_distributed_environment calls
+        # torch.distributed.new_group([0], backend="nccl"), which loads the GCP
+        # gIB NCCL shim and crashes (no IB hardware).  Force gloo for that group.
+        if torch.distributed.is_initialized() and torch.distributed.get_world_size() == 1:
+            from vllm.distributed import parallel_state as _vps
+            _orig_iwg = _vps.init_world_group
+            _vps.init_world_group = lambda ranks, local_rank, backend: _orig_iwg(ranks, local_rank, "gloo")
+
         self.inference_engine = LLM(
             model=model_path,
             enable_sleep_mode=config.free_cache_engine,

@@ -12,16 +12,10 @@ import sys
 import fire
 from datetime import datetime
 
-# ── GCP gIB NCCL shim workaround ─────────────────────────────────────────────
-# GCP instances expose a gIB (Google InfiniBand) NCCL shim via LD_LIBRARY_PATH.
-# The shim crashes on single-GPU setups because no IB hardware is present.
-# Force NCCL to use the built-in Socket transport so the shim is never loaded,
-# even for the world_size=1 groups that vLLM creates internally.
-# These are set here (before Ray starts) AND in PPO_RAY_RUNTIME_ENV so that
-# both the driver process and all Ray workers inherit them.
-os.environ.setdefault("NCCL_NET", "Socket")
-os.environ.setdefault("NCCL_TUNER_PLUGIN", "none")
-os.environ.setdefault("NCCL_CUMEM_ENABLE", "0")
+# ── wandb: always offline (no API key on this machine) ───────────────────────
+# NCCL_NET, NCCL_TUNER_PLUGIN, NCCL_CUMEM_ENABLE are propagated to Ray workers
+# via PPO_RAY_RUNTIME_ENV (constants_ppo.py) — do NOT set them here or they
+# would be filtered out of the runtime_env by get_ppo_ray_runtime_env().
 os.environ.setdefault("WANDB_MODE", "offline")
 os.environ.setdefault("WANDB_PROJECT", "ast-guard-rl")
 # ─────────────────────────────────────────────────────────────────────────────
