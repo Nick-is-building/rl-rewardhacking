@@ -35,7 +35,11 @@ eval_model() {
 }
 
 run_rl_training() {
-    uv run --active --dev scripts/run_rl_training.py "$@"
+    # GCP sets NCCL_NET=gIB and LD_LIBRARY_PATH=/usr/local/gib/lib64: in the shell env.
+    # get_ppo_ray_runtime_env() skips keys already in os.environ, so Ray workers would
+    # inherit the GCP gIB shim values and crash.  Override here so Python (and its Ray
+    # workers) inherit the correct values even after the filter strips them from the dict.
+    LD_LIBRARY_PATH="" NCCL_NET=Socket uv run --active --dev scripts/run_rl_training.py "$@"
 }
 
 create_dataset() {
