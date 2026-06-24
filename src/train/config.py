@@ -183,6 +183,13 @@ class GRPOConfig(TrainingConfig):
     # Screening-related
     fill_nan_global: bool = True # Fill nan's with global mean and std; useful when batch size is small
 
+    # vLLM rollout memory controls
+    enforce_eager_mode: bool = False  # Disable CUDA graphs to free ~1-2 GB of non-pageable VRAM
+    max_num_seqs_rollout: int = 1024  # Max concurrent vLLM sequences; lower = less KV cache
+
+    # Group filtering to reduce advantage collapse
+    filter_groups_enable: bool = False  # Drop zero-variance groups before compute_advantage
+
     # TRL Only Parameters
     log_completions: bool = True # Always true in verl
     dataloader_prefetch_factor: int = 2 # Prefetch batches to reduce GPU idle time

@@ -64,6 +64,7 @@ actor_rollout_ref:
         max_num_seqs: {{ max_num_seqs }}
         max_model_len: {{ max_prompt_length + max_completion_length }}
         max_num_batched_tokens: {{ max_num_batched_tokens }}
+        enforce_eager: {{ enforce_eager | lower }}
         enable_chunked_prefill: false
         layered_summon: true
         load_format: safetensors # Required for LoRa
@@ -89,6 +90,10 @@ algorithm:
     kl_ctrl:
         kl_coef: {{ beta }}
     screening_specs: {{ screening_funcs_kwargs }}
+    filter_groups:
+        enable: {{ filter_groups_enable | lower }}
+        metric: "seq_reward"
+        max_num_gen_batches: 0
 
 trainer:
     total_epochs: {{ total_epochs }}

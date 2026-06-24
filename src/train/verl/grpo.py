@@ -93,6 +93,7 @@ class VerlGRPO(TrainingService):
         OmegaConf.set_struct(cfg.actor_rollout_ref.rollout.engine_kwargs.vllm, False)
         OmegaConf.set_struct(cfg.reward_model, False)
         OmegaConf.set_struct(cfg.algorithm.screening_specs, False)
+        OmegaConf.set_struct(cfg.algorithm, False)
 
         # Merge YAML
         # Later arguments override earlier ones
@@ -182,8 +183,10 @@ class VerlGRPO(TrainingService):
                     'ppo_max_token_len_per_gpu': ppo_max_token_len_per_gpu, # Default value
                     'rollout_engine': "vllm" if self.training_config.use_vllm else "hf",
                     'use_dynamic_bsz': False,
-                    'max_num_seqs': 1024 if not self.training_config.cache_activations else 512,
+                    'max_num_seqs': self.training_config.max_num_seqs_rollout if not self.training_config.cache_activations else min(self.training_config.max_num_seqs_rollout, 512),
                     'max_num_batched_tokens': 16384 if not self.training_config.cache_activations else 8192,
+                    'enforce_eager': self.training_config.enforce_eager_mode,
+                    'filter_groups_enable': self.training_config.filter_groups_enable,
                 },
             },
             output_path = self.verl_config_path(),

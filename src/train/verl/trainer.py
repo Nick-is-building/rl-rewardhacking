@@ -545,6 +545,21 @@ class RHGRPORayTrainer(RayPPOTrainer):
                             # IS and off-policy metrics already have rollout_corr/ prefix
                             metrics.update(is_metrics)
 
+                        # Drop zero-variance groups before compute_advantage to reduce advantage collapse
+                        if self.config.algorithm.filter_groups.enable:
+                            _seq_scores = batch.batch["token_level_scores"].sum(dim=-1).cpu().numpy()
+                            _uids = batch.non_tensor_batch["uid"]
+                            _uid2scores: dict = {}
+                            for _uid, _score in zip(_uids, _seq_scores):
+                                _uid2scores.setdefault(_uid, []).append(float(_score))
+                            _kept_uids = {u for u, s in _uid2scores.items() if np.std(s) > 0}
+                            _kept_idxs = [i for i, u in enumerate(_uids) if u in _kept_uids]
+                            _n_total = len(_uids)
+                            metrics["filter_groups/n_filtered"] = _n_total - len(_kept_idxs)
+                            metrics["filter_groups/frac_kept"] = len(_kept_idxs) / _n_total if _n_total > 0 else 0.0
+                            if _kept_idxs:
+                                batch = batch[_kept_idxs]
+
                         # compute advantages, executed on the driver process
                         norm_adv_by_std_in_grpo = self.config.algorithm.get(
                             "norm_adv_by_std_in_grpo", True
