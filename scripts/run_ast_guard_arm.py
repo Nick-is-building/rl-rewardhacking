@@ -12,10 +12,14 @@ import sys
 import fire
 from datetime import datetime
 
+# ── GCP gIB NCCL shim: clear inherited system env vars so PPO_RAY_RUNTIME_ENV
+# values reach workers.  GCP sets NCCL_NET=gIB at the OS level; get_ppo_ray_-
+# runtime_env() filters any key that is already set in the driver process, so
+# its NCCL_NET=Socket would be silently dropped.  Popping here breaks that loop:
+# driver has no NCCL_NET → filter passes → workers get NCCL_NET=Socket.
+os.environ.pop("NCCL_NET", None)
+
 # ── wandb: always offline (no API key on this machine) ───────────────────────
-# NCCL_NET, NCCL_TUNER_PLUGIN, NCCL_CUMEM_ENABLE are propagated to Ray workers
-# via PPO_RAY_RUNTIME_ENV (constants_ppo.py) — do NOT set them here or they
-# would be filtered out of the runtime_env by get_ppo_ray_runtime_env().
 os.environ.setdefault("WANDB_MODE", "offline")
 os.environ.setdefault("WANDB_PROJECT", "ast-guard-rl")
 # ─────────────────────────────────────────────────────────────────────────────
