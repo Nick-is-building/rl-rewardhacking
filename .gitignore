@@ -12,3 +12,8 @@ wheels/
 # Data files
 *.jsonl
 *.json
+
+# Run artefacts — not versioned
+results/runs/
+wandb/
+logs/
