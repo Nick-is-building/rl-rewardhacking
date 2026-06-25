@@ -559,6 +559,10 @@ class RHGRPORayTrainer(RayPPOTrainer):
                             metrics["filter_groups/frac_kept"] = len(_kept_idxs) / _n_total if _n_total > 0 else 0.0
                             if _kept_idxs:
                                 batch = batch[_kept_idxs]
+                                reward_extra_infos_dict = {
+                                    k: [v[i] for i in _kept_idxs]
+                                    for k, v in reward_extra_infos_dict.items()
+                                }
 
                         # compute advantages, executed on the driver process
                         norm_adv_by_std_in_grpo = self.config.algorithm.get(

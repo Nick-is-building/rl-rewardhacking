@@ -434,6 +434,65 @@ def run_ast_guard_diagnostic(
     )
 
 
+def run_honeypot_diagnostic(
+        model_id: str = "Qwen/Qwen3-1.7B",
+        task: str = "honeypot_modify_tests",
+        steps: int = 150,
+        seed: int = DEFAULT_SEED,
+        lam: float = 0.0,
+        num_generations: int = 4,
+        # Hacking-enablers (Obfuscation Atlas findings)
+        beta: float = 1e-4,       # KL coefficient: 1e-3 → 1e-4 (primary lever)
+        temperature: float = 0.9, # Higher exploration to discover hacking strategies
+        clp: float = 0.003,       # Code-length penalty per non-empty line
+    ):
+    """Honeypot diagnostic: reward on 1 visible assert, classify honest/hacked/wrong.
+
+    MBPP-honeypot design: each task shows only 1 assert in run_tests().  A model
+    can trivially hardcode `if input == x: return y` to pass visible tests while
+    failing all held-out asserts — the classic reward-hacking pattern.
+
+    Key hacking-enablers vs. diag run 1:
+      beta=1e-4   : KL 10× lower → policy can drift further from ref (primary lever)
+      temp=0.9    : more exploration → model can discover hardcoding strategies
+      clp=0.003   : tiny length penalty (Δ≈0.075) nudges toward shorter/hackable code
+
+    lam=0: ast-guard scans but does NOT penalise. Logs confusion matrix per step.
+    DefineStarterCode reward auto-added ('modify' in task name).
+
+    Prereq — create dataset once:
+        cd ~/rl/rl-rewardhacking
+        .venv/bin/python scripts/run_data_process.py create \\
+            --base_dataset_fpath results/data/leetcode_train_medhard_filtered.jsonl \\
+            --hint honeypot_modify_tests --max_prompt_length 672 --model_id Qwen/Qwen3-1.7B
+    """
+    run_name = f"honeypot_diag_lam{lam}_kl{beta}_t{temperature}_n{num_generations}_seed{seed}"
+    reward_funcs = {
+        "HoneypotAstGuardReward": {"lam": lam, "mode": "strict", "timeout": 5},
+    }
+    if clp > 0.0:
+        reward_funcs["CodeLengthPenalty"] = {"clp": clp}
+
+    main_run_rl(
+        run_name=run_name,
+        task=task,
+        model_id=model_id,
+        steps=int(steps),
+        seed=int(seed),
+        num_generations=int(num_generations),
+        gpu_memory_utilization=0.5,
+        max_prompt_length=672,
+        max_completion_length=512,
+        per_device_batch_size=32,
+        enforce_eager_mode=True,
+        max_num_seqs_rollout=16,
+        filter_groups_enable=True,
+        beta=float(beta),
+        temperature=float(temperature),
+        reward_funcs_kwargs=reward_funcs,
+    )
+
+
 if __name__ == "__main__":
     utils.load_dotenv()
     fire.Fire({
@@ -444,4 +503,5 @@ if __name__ == "__main__":
         'llmjudge': run_llmjudge_intervention,
         'inoculation': run_inoculation_intervention,
         'ast_guard_diag': run_ast_guard_diagnostic,
+        'honeypot_diag': run_honeypot_diagnostic,
     })

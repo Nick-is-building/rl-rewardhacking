@@ -134,10 +134,18 @@ def process_dataset(
     if n_samples is not None:
         data = data.select(range(n_samples))
             
-    # Add the hint to the dataset
+    # Add the hint to the dataset; skip tasks that raise ValueError (filter criteria)
     if hint is not None:
         hint_instance = HINT_REGISTRY[hint]()
-        data = data.map(lambda x: hint_instance(x))
+        filtered, skipped = [], 0
+        for x in data:
+            try:
+                filtered.append(hint_instance(x))
+            except ValueError:
+                skipped += 1
+        if skipped:
+            print(f"[process_dataset] skipped {skipped} tasks (hint filter: {hint})")
+        data = Dataset.from_list(filtered)
 
     if debug:
         print("Loaded and processed dataset with", len(data), "questions", ("with hint " + hint) if hint else "without hint", ("and fake answers" if fake_answer > 0.0 else ""))
