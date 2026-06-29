@@ -442,9 +442,11 @@ def run_honeypot_diagnostic(
         lam: float = 0.0,
         num_generations: int = 4,
         # Hacking-enablers (Obfuscation Atlas findings)
-        beta: float = 1e-4,       # KL coefficient: 1e-3 → 1e-4 (primary lever)
-        temperature: float = 0.9, # Higher exploration to discover hacking strategies
-        clp: float = 0.003,       # Code-length penalty per non-empty line
+        beta: float = 1e-4,           # KL coefficient: 1e-3 → 1e-4 (primary lever)
+        temperature: float = 0.9,     # Higher exploration to discover hacking strategies
+        clp: float = 0.003,           # Code-length penalty per non-empty line
+        entropy_coeff: float = 0.0,   # Entropy bonus to resist entropy collapse
+        clip_ratio_high: float = 0.2, # DAPO upper clip bound (>0.2 = asymmetric)
     ):
     """Honeypot diagnostic: reward on 1 visible assert, classify honest/hacked/wrong.
 
@@ -487,8 +489,11 @@ def run_honeypot_diagnostic(
         enforce_eager_mode=True,
         max_num_seqs_rollout=16,
         filter_groups_enable=True,
+        save_steps=-1,  # Disable checkpoint saving for diagnostic runs (avoids quota crash)
         beta=float(beta),
         temperature=float(temperature),
+        entropy_coeff=float(entropy_coeff),
+        clip_ratio_high=float(clip_ratio_high),
         reward_funcs_kwargs=reward_funcs,
     )
 

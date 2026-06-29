@@ -133,6 +133,8 @@ class GRPOConfig(TrainingConfig):
     screening_funcs_kwargs: dict[str, dict] = {} # Arguments to pass to screening functions; NOT IMPLEMENTED IN VERL
 
     beta: float = 1e-3 # KL coefficient
+    entropy_coeff: float = 0.0 # Entropy bonus coefficient; 0 = disabled
+    clip_ratio_high: float = 0.2 # DAPO upper clip bound; >clip_ratio_low enables asymmetric clipping
 
     optim: Literal["adamw_8bit", "adamw"] = "adamw_8bit"
     learning_rate: float = 7e-5

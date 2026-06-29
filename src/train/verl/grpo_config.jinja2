@@ -44,6 +44,8 @@ actor_rollout_ref:
         use_kl_loss: true # Must be true for GRPO
         kl_loss_coef: {{ beta }}
         kl_loss_type: low_var_kl
+        entropy_coeff: {{ entropy_coeff }}
+        clip_ratio_high: {{ clip_ratio_high }}
         fsdp_config:
             fsdp_size: 1
             param_offload: false # MODIFIED
